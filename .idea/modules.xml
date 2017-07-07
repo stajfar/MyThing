@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/MyThing.iml" filepath="$PROJECT_DIR$/MyThing.iml" />
+      <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
+      <module fileurl="file://$PROJECT_DIR$/cloudAccessLibrary/cloudAccessLibrary.iml" filepath="$PROJECT_DIR$/cloudAccessLibrary/cloudAccessLibrary.iml" />
+      <module fileurl="file://$PROJECT_DIR$/myUserDrivers/myUserDrivers.iml" filepath="$PROJECT_DIR$/myUserDrivers/myUserDrivers.iml" />
+    </modules>
+  </component>
+</project>
