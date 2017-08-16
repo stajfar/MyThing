@@ -4,11 +4,13 @@ import com.google.android.things.pio.I2cDevice;
 
 import java.io.IOException;
 
+import it.polimi.myUserDrivers.it.polimi.peripheral.I2cDeviceBase;
+
 /**
  * Android Things driver for the PCF8591 Analog to Digital Converter
  * http://www.nxp.com/documents/data_sheet/PCF8591.pdf
  */
-public class Pcf8591 extends BaseI2cDevice {
+public class Pcf8591 extends I2cDeviceBase {
 
     /**
      * Device base address
@@ -30,12 +32,15 @@ public class Pcf8591 extends BaseI2cDevice {
     public static final int MODE_TWO_DIFFERENTIAL = 0x30;
     public static final int AUTO_INCREMENT = 0x04;
 
-    /**
-     * Constructor given I2cDevice for testing with mock device
-     * @param device I2cDevice of the ADC
-     */
-  /* package */ Pcf8591(I2cDevice device) {
-        super(device);
+
+
+
+    public Pcf8591(String i2C1) {
+        super(i2C1);
+          mI2cdevice= Pcf8591.create(0,i2C1);
+         configure(Pcf8591.ANALOG_OUTPUT_ENABLE | Pcf8591.MODE_FOUR_SINGLE_ENDED);
+       // int test= pcf8591.readChannel(0);
+
     }
 
     /**
@@ -44,8 +49,8 @@ public class Pcf8591 extends BaseI2cDevice {
      * @param address value of A0-A2 for your Pcf8591
      * @return new Pcf8591
      */
-    public static Pcf8591 create(int address) {
-        return create(address, getBus());
+    public static I2cDevice create(int address) {
+        return create(address, "I2C1");
     }
 
     /**
@@ -55,13 +60,13 @@ public class Pcf8591 extends BaseI2cDevice {
      * @param bus the I2C bus the device is on
      * @return new Pcf8591
      */
-    public static Pcf8591 create(int address, String bus) {
+    public static I2cDevice create(int address, String bus) {
         int fullAddress = BASE_ADDRESS + address;
-        return new Pcf8591(getDevice(bus, fullAddress));
+        return getI2cDevice(bus, fullAddress);
     }
 
-    public void close() {
-        super.close();
+    public void close() throws IOException {
+        super.closeI2cDevice();
     }
 
     /**
@@ -83,8 +88,8 @@ public class Pcf8591 extends BaseI2cDevice {
         byte[] config = {(byte) ((channel | control) & 0xFF)};
         byte[] buffer = new byte[2];
         try {
-            device.write(config, 1);
-            device.read(buffer, buffer.length);
+            mI2cdevice.write(config, 1);
+            mI2cdevice.read(buffer, buffer.length);
         } catch (IOException e) {
             // nah, bra
         }
@@ -99,8 +104,8 @@ public class Pcf8591 extends BaseI2cDevice {
         byte[] config = {(byte) (control | AUTO_INCREMENT)};
         byte[] buffer = new byte[5];
         try {
-            device.write(config, 1);
-            device.read(buffer, buffer.length);
+            mI2cdevice.write(config, 1);
+            mI2cdevice.read(buffer, buffer.length);
         } catch (IOException e) {
             // nope
         }

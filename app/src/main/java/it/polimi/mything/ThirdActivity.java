@@ -28,7 +28,7 @@ public class ThirdActivity extends AppCompatActivity{
 
         List<String> gpioList=GpioButton.getBusList();
 
-        gpioButton= GpioButton.createGpioButton("BCM26"); //GpioButton.creatGpioButton(gpioList.get(0));
+        gpioButton= GpioButton.createGpioButton("BCM06"); //GpioButton.creatGpioButton(gpioList.get(0));
 
 
         gpioButton.setOnButtonEventListener(new GpioButton.onButtonEventListener() {

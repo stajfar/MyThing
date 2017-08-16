@@ -40,7 +40,7 @@ public class Bmp180SensorDriver implements AutoCloseable {
      */
     public Bmp180SensorDriver(String bus) throws IOException {
         //// TODO: 5/7/2017 uncomment the following line and solve its error
-       // mDevice = new Bmp180(bus);
+        mDevice =  Bmp180.createBmp180(bus);
     }
 
 

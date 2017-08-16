@@ -15,14 +15,16 @@ import java.util.List;
 
 public abstract class I2cDeviceBase {
     private static final String TAG="I2CDeviceBase";
-    I2cDevice mI2cdevice;
+    public I2cDevice mI2cdevice;
 
 
     public I2cDeviceBase(I2cDevice device) {
         this.mI2cdevice = device;
     }
 
+    public I2cDeviceBase(String i2C1) {
 
+    }
 
 
     public static List<String> getBusList() {
@@ -31,7 +33,7 @@ public abstract class I2cDeviceBase {
         if (bustList.isEmpty()) {
             Log.i(TAG, "No I2C port available on this device.");
         } else {
-            Log.i(TAG, "List of available ports: " + bustList);
+            Log.i(TAG, "List of I2C available ports: " + bustList);
         }
         return bustList;
     }
@@ -42,6 +44,7 @@ public abstract class I2cDeviceBase {
         I2cDevice device = null;
         try {
             device = peripheralManagerService.openI2cDevice(busName, address);
+
 
         } catch (IOException e) {
             Log.w(TAG, "Unable to access I2C device", e);

@@ -22,6 +22,10 @@ public abstract class GpioDeviceBase  {
         this.mGpio = mGpio;
     }
 
+    public GpioDeviceBase(String gpiopin) {
+
+    }
+
 
     public static List<String> getBusList() {
         PeripheralManagerService manager = new PeripheralManagerService();
@@ -29,7 +33,7 @@ public abstract class GpioDeviceBase  {
         if (portList.isEmpty()) {
             Log.i(TAG, "No GPIO port available on this device.");
         } else {
-            Log.i(TAG, "List of available ports: " + portList);
+            Log.i(TAG, "List of GPIO available ports: " + portList);
         }
         return portList;
     }
@@ -44,6 +48,7 @@ public abstract class GpioDeviceBase  {
         } catch (IOException e) {
             Log.w(TAG, "Unable to access GPIO device", e);
         }
+
         return device;
     }
 

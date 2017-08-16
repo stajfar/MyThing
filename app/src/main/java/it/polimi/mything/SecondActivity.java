@@ -14,7 +14,7 @@ import android.util.Log;
 
 import android.widget.TextView;
 
-import it.polimi.myUserDrivers.I2cAdc;
+import java.io.IOException;
 
 public class SecondActivity extends AppCompatActivity {
 
@@ -23,7 +23,7 @@ public class SecondActivity extends AppCompatActivity {
     private Handler lightSensorHandler=new Handler();
     TextView txtView;
     Button btnGoBack;
-    I2cAdc adc;
+    //I2cAdc adc;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -45,58 +45,11 @@ public class SecondActivity extends AppCompatActivity {
 
 
         //Read the light sensor
-        readLightSensor();
+        //readLightSensor();
 
     }
 
-    private void readLightSensor() {
-        createAdc();
-
-        lightSensorHandler.post(runnable);
 
 
 
-    }
-
-    Runnable runnable=new Runnable() {
-        @Override
-        public void run() {
-            lightSensorHandler.postDelayed(runnable,1000);
-            int value = adc.readChannel(0);
-            int valueNoise=adc.readChannel(1);
-            //int valueMagnet=adc.readChannel(2);
-            Log.i(TAG, "light Sensor Value: "+value);
-            txtView.setText("Light value: "+ value+ " noise value: "+valueNoise);
-
-
-        }
-    };
-
-
-    private void createAdc() {
-        I2cAdc.I2cAdcBuilder builder = I2cAdc.builder();
-        adc = builder.address(0).fourSingleEnded().withConversionRate(100).build();
-        adc.startConversions();
-    }
-
-
-    @Override
-    public void onBackPressed() {
-
-        Intent intent = new Intent(SecondActivity.this, MainActivity.class);
-        //intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
-        startActivity(intent);
-        super.onBackPressed();
-    }
-
-
-    @Override
-    public void onDestroy() {
-        super.onDestroy();
-        lightSensorHandler.removeCallbacks(runnable);
-        if (adc != null) {
-            adc.stopConversions();
-            adc.close();
-        }
-    }
 }

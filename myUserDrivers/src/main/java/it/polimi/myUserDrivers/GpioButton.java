@@ -23,7 +23,13 @@ public class GpioButton extends GpioDeviceBase{
         super(mGpio);
     }
 
-   public static List<String> getBusList(){
+    public GpioButton(String bcm21) {
+        super(bcm21);
+        this.gpioButton=createGpioButton(bcm21);
+    }
+
+
+    public static List<String> getBusList(){
        return GpioDeviceBase.getBusList();
    }
 

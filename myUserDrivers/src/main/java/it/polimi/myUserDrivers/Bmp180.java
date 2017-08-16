@@ -22,6 +22,17 @@ public class Bmp180 extends I2cDeviceBase implements AutoCloseable {
 
     public final static int BMP180_ADDRESS = 0x77;
 
+    public Bmp180(String i2C1) {
+        super(i2C1);
+        I2cDevice i2cDevice=getI2cDevice(i2C1,BMP180_ADDRESS);
+        mDevice=i2cDevice;
+        try {
+            readCalibrationData();
+        } catch (Exception e) {
+            Log.e(TAG, "Bmp180 Error: ", e);
+        }
+    }
+
     @Retention(SOURCE)
     @IntDef({BMP180_ULTRA_LOW_POWER, BMP180_STANDARD, BMP180_HIGH_RES, BMP180_ULTRA_HIGH_RES})
     public @interface Mode {
