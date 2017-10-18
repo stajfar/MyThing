@@ -1,7 +1,17 @@
 package it.polimi.myUserDrivers;
 
+
+
 import android.hardware.Sensor;
-import android.util.Log;
+
+import com.google.android.things.userdriver.UserDriverManager;
+import com.google.android.things.userdriver.UserSensor;
+import com.google.android.things.userdriver.UserSensorDriver;
+import com.google.android.things.userdriver.UserSensorReading;
+
+import java.io.IOException;
+import java.util.UUID;
+import android.hardware.Sensor;
 
 import com.google.android.things.userdriver.UserDriverManager;
 import com.google.android.things.userdriver.UserSensor;
@@ -11,14 +21,13 @@ import com.google.android.things.userdriver.UserSensorReading;
 import java.io.IOException;
 import java.util.UUID;
 
-
 public class Bmp180SensorDriver implements AutoCloseable {
     private static final String TAG = "Bmp180SensorDriver";
-    public static final String BAROMETER_SENSOR = "com.samgol.barometer";
+
     // DRIVER parameters
     // documented at https://source.android.com/devices/sensors/hal-interface.html#sensor_t
     private static final String DRIVER_VENDOR = "Bosch";
-    private static final String DRIVER_NAME = "BMP180";
+    private static final String DRIVER_NAME = "BMP280/BME280";
     private static final int DRIVER_MIN_DELAY_US = Math.round(1000000.f / Bmp180.MAX_FREQ_HZ);
     private static final int DRIVER_MAX_DELAY_US = Math.round(1000000.f / Bmp180.MIN_FREQ_HZ);
 
@@ -26,36 +35,43 @@ public class Bmp180SensorDriver implements AutoCloseable {
 
     private TemperatureUserDriver mTemperatureUserDriver;
     private PressureUserDriver mPressureUserDriver;
-    private BarometerUserDriver mBarometerUserDriver;
+
 
     /**
      * Create a new framework sensor driver connected on the given bus.
-     * The driver emits {@link Sensor} with pressure and temperature data when
+     * The driver emits {@link android.hardware.Sensor} with pressure and temperature data when
      * registered.
-     *
      * @param bus I2C bus the sensor is connected to.
      * @throws IOException
      * @see #registerPressureSensor()
      * @see #registerTemperatureSensor()
      */
     public Bmp180SensorDriver(String bus) throws IOException {
-        //// TODO: 5/7/2017 uncomment the following line and solve its error
-        mDevice =  Bmp180.createBmp180(bus);
+        mDevice = new Bmp180(bus);
     }
 
-
-
+    /**
+     * Create a new framework sensor driver connected on the given bus and address.
+     * The driver emits {@link android.hardware.Sensor} with pressure and temperature data when
+     * registered.
+     * @param bus I2C bus the sensor is connected to.
+     * @param address I2C address of the sensor.
+     * @throws IOException
+     * @see #registerPressureSensor()
+     * @see #registerTemperatureSensor()
+     */
+    public Bmp180SensorDriver(String bus, int address) throws IOException {
+        mDevice = new Bmp180(bus, address);
+    }
 
     /**
      * Close the driver and the underlying device.
-     *
      * @throws IOException
      */
     @Override
     public void close() throws IOException {
         unregisterTemperatureSensor();
         unregisterPressureSensor();
-        unregisterBarometerSensor();
         if (mDevice != null) {
             try {
                 mDevice.close();
@@ -67,23 +83,6 @@ public class Bmp180SensorDriver implements AutoCloseable {
 
     /**
      * Register a {@link UserSensor} that pipes temperature readings into the Android SensorManager.
-     *
-     * @see #unregisterBarometerSensor() ()
-     */
-    public void registerBarometerSensor() {
-        if (mDevice == null) {
-            throw new IllegalStateException("cannot register closed driver");
-        }
-
-        if (mBarometerUserDriver == null) {
-            mBarometerUserDriver = new BarometerUserDriver();
-            UserDriverManager.getManager().registerSensor(mBarometerUserDriver.getUserSensor());
-        }
-    }
-
-    /**
-     * Register a {@link UserSensor} that pipes temperature readings into the Android SensorManager.
-     *
      * @see #unregisterTemperatureSensor()
      */
     public void registerTemperatureSensor() {
@@ -99,7 +98,6 @@ public class Bmp180SensorDriver implements AutoCloseable {
 
     /**
      * Register a {@link UserSensor} that pipes pressure readings into the Android SensorManager.
-     *
      * @see #unregisterPressureSensor()
      */
     public void registerPressureSensor() {
@@ -112,6 +110,7 @@ public class Bmp180SensorDriver implements AutoCloseable {
             UserDriverManager.getManager().registerSensor(mPressureUserDriver.getUserSensor());
         }
     }
+
 
     /**
      * Unregister the temperature {@link UserSensor}.
@@ -133,16 +132,15 @@ public class Bmp180SensorDriver implements AutoCloseable {
         }
     }
 
-    /**
-     * Unregister the barometer {@link UserSensor}.
-     */
-    public void unregisterBarometerSensor() {
-        if (mBarometerUserDriver != null) {
-            UserDriverManager.getManager().unregisterSensor(mBarometerUserDriver.getUserSensor());
-            mBarometerUserDriver = null;
+
+    private void maybeSleep() throws IOException {
+        if ((mTemperatureUserDriver == null || !mTemperatureUserDriver.isEnabled()) &&
+                (mPressureUserDriver == null || !mPressureUserDriver.isEnabled()) ) {
+            // mDevice.setMode(Bmp180.MODE_SLEEP);
+        } else {
+            // mDevice.setMode(Bmp180.MODE_NORMAL);
         }
     }
-
 
     private class PressureUserDriver extends UserSensorDriver {
         // DRIVER parameters
@@ -158,7 +156,7 @@ public class Bmp180SensorDriver implements AutoCloseable {
 
         private UserSensor getUserSensor() {
             if (mUserSensor == null) {
-                mUserSensor = UserSensor.builder()
+                mUserSensor = new UserSensor.Builder()
                         .setType(Sensor.TYPE_PRESSURE)
                         .setName(DRIVER_NAME)
                         .setVendor(DRIVER_VENDOR)
@@ -166,10 +164,9 @@ public class Bmp180SensorDriver implements AutoCloseable {
                         .setMaxRange(DRIVER_MAX_RANGE)
                         .setResolution(DRIVER_RESOLUTION)
                         .setPower(DRIVER_POWER)
-                        .setMinDelay(500000)
-//                        .setMinDelay(DRIVER_MIN_DELAY_US)
+                        .setMinDelay(DRIVER_MIN_DELAY_US)
                         .setRequiredPermission(DRIVER_REQUIRED_PERMISSION)
-//                        .setMaxDelay(DRIVER_MAX_DELAY_US)
+                        .setMaxDelay(DRIVER_MAX_DELAY_US)
                         .setUuid(UUID.randomUUID())
                         .setDriver(this)
                         .build();
@@ -184,61 +181,14 @@ public class Bmp180SensorDriver implements AutoCloseable {
 
         @Override
         public void setEnabled(boolean enabled) throws IOException {
-            Log.d(TAG, "setEnabled() called with: enabled = [" + enabled + "]");
             mEnabled = enabled;
+            syncSamplingState();
+            maybeSleep();
         }
 
         private boolean isEnabled() {
             return mEnabled;
         }
-
-
-    }
-
-
-    private class BarometerUserDriver extends UserSensorDriver {
-        private static final float DRIVER_RESOLUTION = 0.005f;
-        private static final float DRIVER_POWER = Bmp180.MAX_POWER_CONSUMPTION_TEMP_UA / 1000.f;
-        private static final int DRIVER_VERSION = 1;
-        private static final String DRIVER_REQUIRED_PERMISSION = "";
-        private boolean mEnabled;
-        private UserSensor mUserSensor;
-
-        private UserSensor getUserSensor() {
-            if (mUserSensor == null) {
-                mUserSensor = UserSensor.builder()
-                        .setCustomType(Sensor.TYPE_DEVICE_PRIVATE_BASE,
-                                BAROMETER_SENSOR,
-                                Sensor.REPORTING_MODE_CONTINUOUS)
-                        .setName(DRIVER_NAME)
-                        .setVendor(DRIVER_VENDOR)
-                        .setVersion(DRIVER_VERSION)
-                        .setResolution(DRIVER_RESOLUTION)
-                        .setMinDelay(500000)
-                        .setPower(DRIVER_POWER)
-                        .setRequiredPermission(DRIVER_REQUIRED_PERMISSION)
-                        .setUuid(UUID.randomUUID())
-                        .setDriver(this)
-                        .build();
-            }
-            return mUserSensor;
-        }
-
-        @Override
-        public UserSensorReading read() throws IOException {
-            return new UserSensorReading(mDevice.readAllValues());
-        }
-
-        @Override
-        public void setEnabled(boolean enabled) throws IOException {
-            Log.d(TAG, "setEnabled() called with: enabled = [" + enabled + "]");
-            mEnabled = enabled;
-        }
-
-        private boolean isEnabled() {
-            return mEnabled;
-        }
-
     }
 
     private class TemperatureUserDriver extends UserSensorDriver {
@@ -255,7 +205,7 @@ public class Bmp180SensorDriver implements AutoCloseable {
 
         private UserSensor getUserSensor() {
             if (mUserSensor == null) {
-                mUserSensor = UserSensor.builder()
+                mUserSensor = new UserSensor.Builder()
                         .setType(Sensor.TYPE_AMBIENT_TEMPERATURE)
                         .setName(DRIVER_NAME)
                         .setVendor(DRIVER_VENDOR)
@@ -263,10 +213,9 @@ public class Bmp180SensorDriver implements AutoCloseable {
                         .setMaxRange(DRIVER_MAX_RANGE)
                         .setResolution(DRIVER_RESOLUTION)
                         .setPower(DRIVER_POWER)
-                        .setMinDelay(500000)
-//                        .setMinDelay(DRIVER_MIN_DELAY_US)
+                        .setMinDelay(DRIVER_MIN_DELAY_US)
                         .setRequiredPermission(DRIVER_REQUIRED_PERMISSION)
-//                        .setMaxDelay(DRIVER_MAX_DELAY_US)
+                        .setMaxDelay(DRIVER_MAX_DELAY_US)
                         .setUuid(UUID.randomUUID())
                         .setDriver(this)
                         .build();
@@ -281,8 +230,9 @@ public class Bmp180SensorDriver implements AutoCloseable {
 
         @Override
         public void setEnabled(boolean enabled) throws IOException {
-            Log.d(TAG, "setEnabled() called with: enabled = [" + enabled + "]");
             mEnabled = enabled;
+            syncSamplingState();
+            maybeSleep();
         }
 
         private boolean isEnabled() {
@@ -290,4 +240,17 @@ public class Bmp180SensorDriver implements AutoCloseable {
         }
     }
 
+
+
+    private void syncSamplingState() throws IOException {
+        // pressure and  both depend on temperature sampling
+
+        boolean pressureEnabled = mPressureUserDriver != null && mPressureUserDriver.isEnabled();
+        boolean temperatureEnabled = pressureEnabled ||
+                mTemperatureUserDriver != null && mTemperatureUserDriver.isEnabled();
+
+        //  mDevice.setTemperatureOversampling(                temperatureEnabled ? Bmp180.OVERSAMPLING_1X : Bmp180.OVERSAMPLING_SKIPPED);
+        // mDevice.setPressureOversampling(                pressureEnabled ? Bmp180.OVERSAMPLING_1X : Bmp180.OVERSAMPLING_SKIPPED);
+
+    }
 }

@@ -31,7 +31,7 @@ public class myInputDriver extends Service {
     public void onCreate() {
         super.onCreate();
 
-        buttonDriver=InputDriver.builder(InputDevice.SOURCE_CLASS_BUTTON)
+        buttonDriver= new InputDriver.Builder(InputDevice.SOURCE_CLASS_BUTTON)
                 .setName(DRIVER_NAME)
                 .setVersion(DRIVER_VERSION)
                 .setKeys(new int[] {KEY_CODE})
