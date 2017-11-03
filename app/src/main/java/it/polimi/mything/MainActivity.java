@@ -1,38 +1,42 @@
 package it.polimi.mything;
 
-
 //activity default imports
 import android.app.Activity;
+import android.os.Bundle;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
-import android.support.v7.app.AppCompatActivity;
-import android.os.Bundle;
-import it.polimi.myUserDrivers.GpioOut;
-import it.polimi.myUserDrivers.Bmp180;
-import it.polimi.myUserDrivers.Pcf8591;
-import it.polimi.myUserDrivers.GpioButton;
+//Peripheral Drivers
+import it.polimi.myUserDrivers.Bmp180SensorDriver;
 import android.util.Log;
-import android.os.Handler;
+//Cloud Access Libraries
+import it.polimi.cloudaccesslibrary.MqttHelper;
+
+import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
+import org.eclipse.paho.client.mqttv3.MqttCallbackExtended;
+import org.eclipse.paho.client.mqttv3.MqttMessage;
+
 import java.util.List;
 import java.io.IOException;
 
-import it.polimi.myUserDrivers.Bmp180SensorDriver;
 
-
-public class MainActivity   extends Activity {
+public class MainActivity extends Activity  {
 
     //define constants here
     private static final String TAG = Activity.class.getSimpleName();
 
 
-    private Bmp180SensorDriver bmx280sensordriver;
+    private Bmp180SensorDriver bmp180sensordriver;
 
     private float temperatureListenerLastValue;
     private float pressureListenerLastValue;
 
     private SensorManager mSensorManager;
+    private  MqttHelper mqtthelper;
+
+
+
 
 
 
@@ -44,12 +48,12 @@ public class MainActivity   extends Activity {
             if (sensor.getType() == Sensor.TYPE_AMBIENT_TEMPERATURE) {
                 // Our sensor is connected. Start receiving  data.
                 mSensorManager.registerListener(temperatureListener, sensor,
-                        (int) (10.0*1000*1000) );
+                        (int) (6.0*1000000) );
             }
             if (sensor.getType() == Sensor.TYPE_PRESSURE) {
                 // Our sensor is connected. Start receiving  data.
                 mSensorManager.registerListener(pressureListener, sensor,
-                        (int) (20.0*1000*1000) );
+                        (int) (3.0*1000000) );
             }
 
         }
@@ -66,7 +70,8 @@ public class MainActivity   extends Activity {
         @Override
         public void onSensorChanged(SensorEvent event) {
             temperatureListenerLastValue = event.values[0];
-            Log.d(TAG, "temperature sensor changed: " + temperatureListenerLastValue);
+            Log.d(TAG, "sensor temperatureListener changed: " + temperatureListenerLastValue);
+            mqtthelper.publish("polimi/feeds/temperature",Float.toString(temperatureListenerLastValue),2,false);
 
         }
 
@@ -81,7 +86,8 @@ public class MainActivity   extends Activity {
         @Override
         public void onSensorChanged(SensorEvent event) {
             pressureListenerLastValue = event.values[0];
-            Log.d(TAG, "pressure sensor changed: " + pressureListenerLastValue);
+            Log.d(TAG, "sensor pressureListener changed: " + pressureListenerLastValue);
+           // mqtthelper.publish("polimi/feeds/pressure",Float.toString(pressureListenerLastValue),1,false);
 
         }
 
@@ -108,15 +114,55 @@ public class MainActivity   extends Activity {
 
 
         try {
-            bmx280sensordriver = new Bmp180SensorDriver("I2C1");
+            bmp180sensordriver = new Bmp180SensorDriver("I2C1");
 
-            bmx280sensordriver.registerTemperatureSensor();
-            bmx280sensordriver.registerPressureSensor();
+            bmp180sensordriver.registerTemperatureSensor();
+            bmp180sensordriver. registerPressureSensor();
 
-            Log.d(TAG, "Initialized bmx280sensordriver");
+            Log.d(TAG, "Initialized bmp180sensordriver");
         } catch (IOException e) {
-            throw new RuntimeException("Error initializing bmx280sensordriver", e);
+            throw new RuntimeException("Error initializing bmp180sensordriver", e);
         }
+
+        try {
+            //// TODO: developer should add username and password if Mqtt broker asks for.
+            mqtthelper = new MqttHelper(this,"tcp://io.adafruit.com",1883,true,60,"polimi","4add1af7a8024e1eafcf73103cc1db3a");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+
+        //mqqtTopicSubscribe();
+        // private void mqqtTopicSubscribe(){
+        mqtthelper.setCallback(new MqttCallbackExtended() {
+            @Override
+            public void connectComplete(boolean reconnect, String serverURI) {
+                Log.i(TAG, "MQTT connection complete");
+                mqtthelper.subscribeToTopic("polimi/feeds/temperature",1);
+            }
+
+            @Override
+            public void connectionLost(Throwable cause) {
+
+            }
+
+            @Override
+            public void messageArrived(String topic, MqttMessage message) throws Exception {
+                Log.i(TAG, "a new message arrived from topic: "+topic+" "+ message.toString());
+
+
+            }
+
+            @Override
+            public void deliveryComplete(IMqttDeliveryToken token) {
+                Log.i(TAG, "MQTT delivery complete");
+
+            }
+        });
+        // }
+
+
+
 
 
 
@@ -158,14 +204,18 @@ public class MainActivity   extends Activity {
         mSensorManager.unregisterDynamicSensorCallback(mDynamicSensorCallback);
 
         // Clean up peripheral.
-        if (bmx280sensordriver != null) {
+        if (bmp180sensordriver != null) {
             try {
-                bmx280sensordriver.close();
+                bmp180sensordriver.close();
             } catch (IOException e) {
                 e.printStackTrace();
             }
-            bmx280sensordriver = null;
+            bmp180sensordriver = null;
         }
+
+        //clean up Cloud Access
+        mqtthelper.close();
+
     }
 
 }

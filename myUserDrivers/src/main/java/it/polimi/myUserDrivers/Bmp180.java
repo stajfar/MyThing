@@ -1,7 +1,6 @@
 package it.polimi.myUserDrivers;
 
 
-
 import android.support.annotation.IntDef;
 import android.util.Log;
 
@@ -10,18 +9,35 @@ import com.google.android.things.pio.PeripheralManagerService;
 
 import java.io.IOException;
 import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+
+import it.polimi.myUserDrivers.it.polimi.peripheral.I2cDeviceBase;
 
 import static java.lang.annotation.RetentionPolicy.SOURCE;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 
-public class Bmp180 implements AutoCloseable {
+public class Bmp180 extends I2cDeviceBase implements AutoCloseable {
     private static final String TAG = Bmp180.class.getSimpleName();
 
 
     public final static int BMP180_ADDRESS = 0x77;
 
-    public Bmp180(String bus, int address) {
+
+
+
+
+
+
+    public Bmp180(String i2C1) {
+        super(i2C1);
+        I2cDevice i2cDevice=getI2cDevice(i2C1,BMP180_ADDRESS);
+        mDevice=i2cDevice;
+        try {
+            readCalibrationData();
+        } catch (Exception e) {
+            Log.e(TAG, "Bmp180 Error: ", e);
+        }
     }
 
     @Retention(SOURCE)
@@ -81,7 +97,7 @@ public class Bmp180 implements AutoCloseable {
 
     private I2cDevice mDevice;
 
-    private int mode = BMP180_STANDARD;
+    private int mode = BMP180_ULTRA_HIGH_RES;
 
     private LastRead lastRawTemp = new LastRead();
     private LastRead lastRawPressure = new LastRead();
@@ -89,9 +105,12 @@ public class Bmp180 implements AutoCloseable {
     private LastRead lastTemperature = new LastRead();
 
 
-    private int standardSeaLevelPressure = 101325;
+    private float standardSeaLevelPressure = 101500;
 
-    public Bmp180(String i2cName) {
+
+/*
+    public Bmp180(String i2cName, I2cDevice mDevice) {
+        super(mDevice);
         try {
             mDevice = new PeripheralManagerService().openI2cDevice(i2cName, BMP180_ADDRESS);
             try {
@@ -104,7 +123,10 @@ public class Bmp180 implements AutoCloseable {
         }
     }
 
+    */
+
     public Bmp180(I2cDevice i2cDevice) {
+        super(i2cDevice);
         mDevice = i2cDevice;
         try {
             readCalibrationData();
@@ -112,6 +134,13 @@ public class Bmp180 implements AutoCloseable {
             Log.e(TAG, "Bmp180 Error: ", e);
         }
     }
+
+    public static Bmp180 createBmp180(String i2cBusName){
+        I2cDevice i2cDevice=getI2cDevice(i2cBusName,BMP180_ADDRESS);
+
+        return new Bmp180(i2cDevice);
+    }
+
 
 
     public synchronized void setMode(@Mode int mode) {
@@ -151,8 +180,8 @@ public class Bmp180 implements AutoCloseable {
 
         if (lastRawTemp.isValid())
             return lastRawTemp.val;
-
-        mDevice.writeRegByte(BMP180_CONTROL, (byte) BMP180_READ_TEMPERATURE_CMD);
+        writeRegByte(mDevice,BMP180_CONTROL, (byte) BMP180_READ_TEMPERATURE_CMD);
+        //mDevice.writeRegByte(BMP180_CONTROL, (byte) BMP180_READ_TEMPERATURE_CMD);
         waitFor(5);
         int raw = readU16(BMP180_TEMPERATURE_DATA);
 
@@ -170,12 +199,12 @@ public class Bmp180 implements AutoCloseable {
 
         if (lastRawPressure.isValid())
             return lastRawPressure.val;
-
-        mDevice.writeRegByte(BMP180_CONTROL, (byte) (BMP180_READ_PRESSURE_CMD + (mode << 6)));
+        writeRegByte(mDevice,BMP180_CONTROL, (byte) (BMP180_READ_PRESSURE_CMD + (mode << 6)));
+        //mDevice.writeRegByte(BMP180_CONTROL, (byte) (BMP180_READ_PRESSURE_CMD + (mode << 6)));
         waitFor(modeDelay[mode]);
-        int msb = mDevice.readRegByte(BMP180_PRESSURE_DATA);
-        int lsb = mDevice.readRegByte(BMP180_PRESSURE_DATA + 1);
-        int xlsb = mDevice.readRegByte(BMP180_PRESSURE_DATA + 2);
+        int msb =readRegByte(mDevice,BMP180_PRESSURE_DATA); //mDevice.readRegByte(BMP180_PRESSURE_DATA);
+        int lsb =readRegByte(mDevice,BMP180_PRESSURE_DATA+1); //mDevice.readRegByte(BMP180_PRESSURE_DATA + 1);
+        int xlsb =readRegByte(mDevice,BMP180_PRESSURE_DATA+2); //mDevice.readRegByte(BMP180_PRESSURE_DATA + 2);
         int raw = ((msb << 16) + (lsb << 8) + xlsb) >> (8 - mode);
 
         lastRawPressure.setVal(raw);
@@ -278,7 +307,7 @@ public class Bmp180 implements AutoCloseable {
      *
      * @param standardSeaLevelPressure the standard sea level pressure for your location
      */
-    public synchronized void setStandardSeaLevelPressure(int standardSeaLevelPressure) {
+    public synchronized void setStandardSeaLevelPressure(float standardSeaLevelPressure) {
         this.standardSeaLevelPressure = standardSeaLevelPressure;
     }
 
@@ -292,20 +321,8 @@ public class Bmp180 implements AutoCloseable {
 
     @Override
     public synchronized void close() throws IOException {
-        if (mDevice != null) {
-            try {
-                mDevice.close();
-            } finally {
-                mDevice = null;
-            }
-        }
+        super.closeI2cDevice();
     }
-
-
-
-
-
-
 }
 
 class LastRead {

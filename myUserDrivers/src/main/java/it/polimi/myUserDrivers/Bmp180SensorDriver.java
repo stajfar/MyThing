@@ -61,7 +61,7 @@ public class Bmp180SensorDriver implements AutoCloseable {
      * @see #registerTemperatureSensor()
      */
     public Bmp180SensorDriver(String bus, int address) throws IOException {
-        mDevice = new Bmp180(bus, address);
+        //mDevice = new Bmp180(bus, address);
     }
 
     /**
@@ -249,8 +249,12 @@ public class Bmp180SensorDriver implements AutoCloseable {
         boolean temperatureEnabled = pressureEnabled ||
                 mTemperatureUserDriver != null && mTemperatureUserDriver.isEnabled();
 
-        //  mDevice.setTemperatureOversampling(                temperatureEnabled ? Bmp180.OVERSAMPLING_1X : Bmp180.OVERSAMPLING_SKIPPED);
-        // mDevice.setPressureOversampling(                pressureEnabled ? Bmp180.OVERSAMPLING_1X : Bmp180.OVERSAMPLING_SKIPPED);
+         // mDevice.setTemperatureOversampling(                temperatureEnabled ? Bmp180.OVERSAMPLING_1X : Bmp180.OVERSAMPLING_SKIPPED);
+         // mDevice.setPressureOversampling(                pressureEnabled ? Bmp180.OVERSAMPLING_1X : Bmp180.OVERSAMPLING_SKIPPED);
 
     }
+
+
+
+
 }
