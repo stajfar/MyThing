@@ -55,6 +55,8 @@ public class GpioButton extends GpioDeviceBase{
        // will be implemented by Activity
        void onButtonEvent(GpioButton gpioButton, boolean currentState);
    }
+
+
    public void setOnButtonEventListener(onButtonEventListener listener){
        mlistener=listener;
    }
